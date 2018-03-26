@@ -4,7 +4,7 @@
 
 #define data    4
 #define Clock   5
-#define latch   7
+#define latch   7 // latch
 #define oe      6 // tlc output enable
 #define max_de  2 // max3085 driver output enable
 
