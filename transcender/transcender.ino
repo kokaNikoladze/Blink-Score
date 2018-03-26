@@ -13,7 +13,7 @@ metronome::State myMetro{};
 
 void setup() {
 
-  Serial.begin(153600);
+  Serial.begin(115200); //153600
   pinMode(oe, OUTPUT);
   digitalWrite(oe, LOW);
   tlc.begin();
@@ -21,7 +21,7 @@ void setup() {
   tlc.write();
   digitalWrite(oe, HIGH);
 
-//disable rs485 driver output
+  //disable rs485 driver output
   pinMode(max_de, OUTPUT);
   digitalWrite(max_de, LOW);
 }
@@ -111,19 +111,40 @@ void loop()
   delay(1);
 }
 
-
 void setBar(uint8_t newBar)
 {
+  const unsigned long duration = 500;
+  const unsigned long blink_half_period = 50;
+  const int blink_brightness = 500;
+  const int solid_brightness = 100;
+
+  static unsigned long last_change = 0;
 
   if (newBar == oldBar) {
+    // if changed recently, then modulate brightness
+    unsigned long since_last_change = millis() - last_change;
+
+    if (duration < since_last_change) {
+      tlc.setPWM(barNum[newBar - 1], solid_brightness);
+      return;
+    }
+
+    int on = (since_last_change / blink_half_period) & 1;
+    int brightness = on ? blink_brightness : 0;
+
+    tlc.setPWM(barNum[newBar - 1], brightness);
+
     return;
   }
+
+  // save: last bar change was now
+  last_change = millis();
 
   if (oldBar != 0) {
     tlc.setPWM(barNum[oldBar - 1], 0);
   }
   if (newBar != 0) {
-    tlc.setPWM(barNum[newBar - 1], 100);
+    tlc.setPWM(barNum[newBar - 1], solid_brightness);
   }
   oldBar = newBar;
 }
@@ -147,7 +168,7 @@ void disp(int num) {
   };
 
   // A  B  C  D  E  F  G
-  uint8_t number[ 11 ][ 7 ] = {{ 1, 1, 1, 1, 1, 1, 0 },  // pattern for a 0
+  uint8_t number[ 11 ][ 7 ] = {{ 1, 1, 1, 1, 1, 1, 0 }, // pattern for a 0
     { 0, 1, 1, 0, 0, 0, 0 },  // pattern for a 1
     { 1, 1, 0, 1, 1, 0, 1 },  // pattern for a 2
     { 1, 1, 1, 1, 0, 0, 1 },  // pattern for a 3
@@ -188,17 +209,17 @@ void disp(int num) {
 }
 
 
-  void ledStrip(int blobCentre) {
+void ledStrip(int blobCentre) {
 
   int offset = 100;
   for (int i = 0; i < 19; i++) {
     int brightness = constrain(strip - (offset * i), 0, 100);
     tlc.setPWM(i, brightness);
   }
-  }
+}
 
 /*
-void ledStrip(float blobCentre) {
+  void ledStrip(float blobCentre) {
 
   int maxBlobBrightness = 100;
   float width = 1.0f + blobCentre; //value from 1 to 19;
@@ -211,7 +232,7 @@ void ledStrip(float blobCentre) {
     }
     tlc.setPWM(i, linearPWM(brightness * 100));  //edited
   }
-}
+  }
 */
 
 int linearPWM(int percentage) {
